@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>初中数学精准诊断教学系统 v3.0</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --error: #e74c3c; --success: #27ae60; --bg: #f8f9fa; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; margin-bottom: 25px; }
+        .timer { font-size: 24px; color: var(--error); font-weight: bold; padding: 5px 15px; border: 2px solid var(--error); border-radius: 8px; }
+        .toolbar { position: sticky; top: 10px; z-index: 100; background: #ebf5ff; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .toolbar button { padding: 6px 15px; cursor: pointer; background: white; border: 1px solid var(--accent); border-radius: 4px; font-weight: bold; color: var(--accent); }
+        .q-card { margin-bottom: 25px; padding: 20px; border: 1px solid #eef2f7; border-radius: 10px; position: relative; }
+        .input-box { width: 220px; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: 0.3s; }
+        .btn-know { background: none; border: none; color: #7f8c8d; text-decoration: underline; cursor: pointer; font-size: 13px; margin-top: 8px; display: block; }
+        .info-panel { display: none; margin-top: 12px; padding: 15px; border-radius: 6px; font-size: 14px; }
+        .knowledge-box { background: #e8f4fd; color: #2980b9; border-left: 4px solid var(--accent); }
+        .wrong-box { background: #fdf2f2; border-left: 4px solid var(--error); color: #c0392b; }
+        .correct-box { background: #f0fdf4; border-left: 4px solid var(--success); color: #1e8449; }
+        .submit-btn, .feedback-btn { background: var(--primary); color: white; border: none; padding: 15px 40px; border-radius: 8px; cursor: pointer; font-size: 18px; display: block; margin: 30px auto; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="page1">
+    <div class="header">
+        <h2>一次函数专题诊断练习</h2>
+        <div class="timer" id="timerDisplay">03:00</div>
+    </div>
+
+    <div class="toolbar" id="mainToolbar">
+        <button onclick="insertSymbol('k')">k</button>
+        <button onclick="insertSymbol('>')">&gt;</button>
+        <button onclick="insertSymbol('<')">&lt;</button>
+        <button onclick="insertSymbol('≥')">≥</button>
+        <button onclick="insertSymbol('≤')">≤</button>
+        <button onclick="insertSymbol('≠')">≠</button>
+        <button onclick="insertSymbol('=')">=</button>
+        <button onclick="insertSymbol('且')">且</button>
+    </div>
+
+    <div style="font-size: 18px; margin-bottom: 20px; padding: 15px; background: #eee; border-radius: 8px;">
+        已知一次函数 $y = (2 - 2k)x + k - 3$
+    </div>
+
+    <div id="quiz-container">
+        <div class="q-card" id="qc1">
+            <div>① y 是 x 的正比例函数，求 k 的值：</div>
+            <input type="text" class="input-box" id="ans1" onfocus="lastFocus='ans1'">
+            <button class="btn-know" onclick="showPop('kp1')">查看具体性质</button>
+            <div id="kp1" class="info-panel knowledge-box">
+                (1) 正比例函数自变量的系数不为0；<br>
+                (2) 正比例函数的常数项必须为0。
+            </div>
+            <div id="res1" class="info-panel"></div>
+        </div>
+
+        <div class="q-card" id="qc2">
+            <div>② y 随 x 的增大而增大，求 k 的取值范围：</div>
+            <input type="text" class="input-box" id="ans2" onfocus="lastFocus='ans2'">
+            <button class="btn-know" onclick="showPop('kp2')">查看具体性质</button>
+            <div id="kp2" class="info-panel knowledge-box">
+                (1) 函数的增减性取决于系数 $k_{slope}$ 的符号；<br>
+                (2) $k_{slope} > 0$ 时，y 随 x 的增大而增大。
+            </div>
+            <div id="res2" class="info-panel"></div>
+        </div>
+
+        <div class="q-card" id="qc3">
+            <div>③ 一次函数与 y 轴交于负半轴，求 k 的取值范围：</div>
+            <input type="text" class="input-box" id="ans3" onfocus="lastFocus='ans3'">
+            <button class="btn-know" onclick="showPop('kp3')">查看具体性质</button>
+            <div id="kp3" class="info-panel knowledge-box">
+                (1) 一次函数与 y 轴交点的纵坐标即为常数项 b；<br>
+                (2) “交于负半轴”意味着 $b < 0$；<br>
+                (3) 必须保证函数是一次函数，即系数不为0。
+            </div>
+            <div id="res3" class="info-panel"></div>
+        </div>
+
+        <div class="q-card" id="qc4">
+            <div>④ 一次函数不经过第三象限，求 k 的取值范围：</div>
+            <input type="text" class="input-box" id="ans4" onfocus="lastFocus='ans4'">
+            <button class="btn-know" onclick="showPop('kp4')">查看具体性质</button>
+            <div id="kp4" class="info-panel knowledge-box">
+                (1) 不经过第三象限，意味着图象必须经过第二、四象限（及第一象限或原点）；<br>
+                (2) 对应系数特征：系数 $k_{slope} < 0$ 且 常数项 $b \geq 0$。
+            </div>
+            <div id="res4" class="info-panel"></div>
+        </div>
+
+        <div class="q-card" id="qc5">
+            <div>⑤ 在④的基础上有两点 A(-1, a)，B(2, b)，试比较 a 与 b 的大小：</div>
+            <input type="text" class="input-box" id="ans5" onfocus="lastFocus='ans5'">
+            <button class="btn-know" onclick="showPop('kp5')">查看具体性质</button>
+            <div id="kp5" class="info-panel knowledge-box">
+                (1) 比较大小可利用增减性：若递减，则较大的自变量对应较小的函数值；<br>
+                (2) 也可利用代入法：计算 $a-b$ 的符号进行判断。
+            </div>
+            <div id="res5" class="info-panel"></div>
+        </div>
+    </div>
+
+    <button class="submit-btn" id="subBtn" onclick="submitMain()">提交并判分</button>
+    <button class="feedback-btn hidden" id="feedBtn" onclick="renderFeedback()">查看反馈与强化训练</button>
+</div>
+
+<div class="container hidden" id="page2">
+    <h2 id="scoreTitle">诊断反馈与错题强化</h2>
+    <div class="toolbar" id="remedyToolbar">
+        <button onclick="insertSymbolRemedy('k')">k</button>
+        <button onclick="insertSymbolRemedy('>')">&gt;</button>
+        <button onclick="insertSymbolRemedy('<')">&lt;</button>
+        <button onclick="insertSymbolRemedy('≥')">≥</button>
+        <button onclick="insertSymbolRemedy('≤')">≤</button>
+        <button onclick="insertSymbolRemedy('≠')">≠</button>
+        <button onclick="insertSymbolRemedy('=')">=</button>
+    </div>
+    <div id="feedbackContent"></div>
+    <div id="extraSection"></div>
+</div>
+
+<script>
+let timeLeft = 180;
+let score = 0;
+let wrongIndices = [];
+let lastFocus = "ans1";
+let lastFocusRemedy = "";
+
+// 计时器
+let timer = setInterval(() => {
+    timeLeft--;
+    let m = Math.floor(timeLeft/60), s = timeLeft%60;
+    document.getElementById('timerDisplay').innerText = `${m}:${s<10?'0'+s:s}`;
+    if(timeLeft<=0) submitMain();
+}, 1000);
+
+function insertSymbol(s) {
+    let el = document.getElementById(lastFocus);
+    el.value += s; el.focus();
+}
+
+function insertSymbolRemedy(s) {
+    if(!lastFocusRemedy) return;
+    let el = document.getElementById(lastFocusRemedy);
+    el.value += s; el.focus();
+}
+
+function showPop(id) {
+    let el = document.getElementById(id);
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+const standard = {
+    ans1: { val: ["k=3", "3"], right: "k = 3", detail: "<b>详解：</b><br>1. 由正比例函数定义，$b = k-3 = 0$，解得 $k=3$；<br>2. 验证系数：当 $k=3$ 时，$2-2k = -4 \neq 0$，符合定义。<br>3. 故结果为 $k=3$。" },
+    ans2: { val: ["k<1"], right: "k < 1", detail: "<b>详解：</b><br>1. y 随 x 增大而增大，系数 $2-2k > 0$；<br>2. 解不等式：$2k < 2$，得 $k < 1$。" },
+    ans3: { val: ["k<3且k≠1"], right: "k < 3 且 k ≠ 1", detail: "<b>详解：</b><br>1. 与 y 轴交于负半轴，$b = k-3 < 0$，解得 $k < 3$；<br>2. 必须满足是一次函数，$2-2k \neq 0$，解得 $k \neq 1$；<br>3. 综上所述，$k < 3$ 且 $k \neq 1$。" },
+    ans4: { val: ["k≥3"], right: "k ≥ 3", detail: "<b>详解：</b><br>1. 不经过第三象限，要求：系数 $2-2k < 0$ 且 $b = k-3 \geq 0$；<br>2. 由 $2-2k < 0$ 得 $k > 1$；<br>3. 由 $k-3 \geq 0$ 得 $k \geq 3$；<br>4. 取交集，最终结果为 $k \geq 3$。" },
+    ans5: { val: ["a>b"], right: "a > b", detail: "<b>详解：</b><br>1. 由第④题知 $k \geq 3$，此时斜率 $2-2k \leq -4 < 0$，函数单调递减；<br>2. 因为 $x_A = -1 < x_B = 2$，在递减函数中，自变量越小值越大；<br>3. 故 $a > b$。" }
+};
+
+function submitMain() {
+    clearInterval(timer);
+    score = 0; wrongIndices = [];
+    for(let i=1; i<=5; i++) {
+        let u = document.getElementById('ans'+i).value.trim().replace(/\s/g, "");
+        let resDiv = document.getElementById('res'+i);
+        resDiv.style.display = "block";
+        if(standard['ans'+i].val.includes(u)) {
+            score++;
+            resDiv.className = "info-panel correct-box";
+            resDiv.innerHTML = "<b>正确！</b>";
+        } else {
+            wrongIndices.push(i);
+            resDiv.className = "info-panel wrong-box";
+            resDiv.innerHTML = `<b>错误。正确答案：${standard['ans'+i].right}</b><br>${standard['ans'+i].detail}`;
+        }
+    }
+    document.getElementById('subBtn').style.display = "none";
+    document.getElementById('feedBtn').style.display = "block";
+}
+
+function renderFeedback() {
+    document.getElementById('page1').classList.add('hidden');
+    document.getElementById('page2').classList.remove('hidden');
+    let fb = document.getElementById('feedbackContent');
+    
+    if(wrongIndices.length > 0) {
+        let html = "<h3>📍 针对性强化练习（请在下方输入框完成练习）</h3>";
+        wrongIndices.forEach(idx => {
+            let data = remedyBank[idx];
+            html += `<div class="q-card">
+                <b>针对练习（对应原题${idx}）：</b><br>${data.q}<br>
+                <input type="text" class="input-box" id="remedyAns${idx}" onfocus="lastFocusRemedy='remedyAns${idx}'">
+                <button onclick="checkRemedy(${idx})" style="padding:5px 15px; cursor:pointer; margin-left:10px;">检查答案</button>
+                <div id="remedyRes${idx}" class="info-panel"></div>
+            </div>`;
+        });
+        fb.innerHTML = html;
+    } else {
+        fb.innerHTML = "<h3 style='color:var(--success)'>完美！基础扎实，请看下方的进阶挑战。</h3>";
+    }
+
+    if(score >= 4) {
+        document.getElementById('extraSection').innerHTML = `<div class="q-card" style="border: 2px solid var(--success)">
+            <h3>🚀 进阶挑战（附加题）</h3>
+            <p>已知一次函数 y = (2-2k)x + k-3 与 y 轴交于点 C，与 x 轴交于点 D。若 △OCD 的面积为 4，求 k 的值。</p>
+            <input type="text" class="input-box" id="ansBonus" onfocus="lastFocusRemedy='ansBonus'"> 
+            <button onclick="alert('附加题已记录，请与老师核对解析步骤！')" style="padding:5px 15px;">提交思路</button>
+        </div>`;
+    }
+}
+
+const remedyBank = {
+    1: { q: "若 y = (m+2)x + m²-4 是正比例函数，求 m 的值：", a: ["2"], r: "2", d: "<b>详解：</b><br>1. 常数项 $m^2-4=0 \Rightarrow m= \pm 2$；<br>2. 系数 $m+2 \neq 0 \Rightarrow m \neq -2$；<br>3. 综上 m=2。" },
+    2: { q: "若 y = (5-k)x + 1 随 x 增大而减小，求 k 的范围：", a: ["k>5"], r: "k > 5", d: "<b>详解：</b>斜率 $5-k < 0$，解得 $k > 5$。" },
+    3: { q: "直线 y = 3x + b-2 与 y 轴交于原点下方，求 b 的范围：", a: ["b<2"], r: "b < 2", d: "<b>详解：</b>截距 $b-2 < 0 \Rightarrow b < 2$。" },
+    4: { q: "若 y = kx+b 经过第一、二、四象限，则 k___0，b___0 (用符号填空)：", a: ["k<0,b>0"], r: "k < 0, b > 0", d: "<b>详解：</b>过二、四象限 $k<0$，过一、二象限（交 y 轴正半轴）$b>0$。" },
+    5: { q: "已知 y=-x+5，若 x1 > x2，则 y1___y2 (填>或<)：", a: ["<"], r: "<", d: "<b>详解：</b>系数为-1，函数递增。因为 x1 > x2，所以 y1 < y2。" }
+};
+
+function checkRemedy(idx) {
+    let u = document.getElementById('remedyAns'+idx).value.trim().replace(/\s/g, "");
+    let res = document.getElementById('remedyRes'+idx);
+    let data = remedyBank[idx];
+    res.style.display = "block";
+    if(data.a.includes(u)) {
+        res.className = "info-panel correct-box";
+        res.innerHTML = "<b>正确！</b>";
+    } else {
+        res.className = "info-panel wrong-box";
+        res.innerHTML = `<b>错误。正确答案：${data.r}</b><br>${data.d}`;
+    }
+}
+</script>
+
+</body>
+</html>

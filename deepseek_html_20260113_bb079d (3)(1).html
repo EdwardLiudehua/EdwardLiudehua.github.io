@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小人跑步动画与函数图像</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .panel-title {
+            color: #3498db;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .panel-title i {
+            margin-right: 10px;
+            font-size: 1.3em;
+        }
+        
+        /* 动画区域样式 */
+        .animation-area {
+            height: 250px;
+            position: relative;
+            margin-bottom: 20px;
+            background: linear-gradient(to bottom, #e8f4f8, #f9f9f9);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+        
+        .road {
+            position: absolute;
+            top: 60%;
+            left: 20px;
+            right: 20px;
+            height: 8px;
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        .road::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                transparent,
+                transparent 10px,
+                #fff 10px,
+                #fff 20px
+            );
+            transform: translateY(-50%);
+        }
+        
+        .point-a, .point-b {
+            position: absolute;
+            top: 45%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+            color: white;
+            z-index: 2;
+        }
+        
+        .point-a {
+            left: 10px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .point-b {
+            right: 10px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .distance-label {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+        
+        .runner {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: left 0.1s linear;
+            z-index: 3;
+        }
+        
+        .runner-body {
+            width: 40px;
+            height: 60px;
+            background: linear-gradient(to bottom, #ff6b6b, #ee5a52);
+            border-radius: 20px 20px 10px 10px;
+            position: relative;
+        }
+        
+        .runner-head {
+            width: 30px;
+            height: 30px;
+            background: #ffd166;
+            border-radius: 50%;
+            position: absolute;
+            top: -20px;
+            left: 5px;
+        }
+        
+        .runner-arm {
+            position: absolute;
+            width: 8px;
+            height: 25px;
+            background: #ff6b6b;
+            border-radius: 4px;
+            top: 15px;
+        }
+        
+        .left-arm {
+            left: -8px;
+            transform-origin: top right;
+            animation: armSwing 0.5s infinite alternate;
+        }
+        
+        .right-arm {
+            right: -8px;
+            transform-origin: top left;
+            animation: armSwing 0.5s infinite alternate-reverse;
+        }
+        
+        .runner-leg {
+            position: absolute;
+            width: 10px;
+            height: 30px;
+            background: #4a4a4a;
+            border-radius: 5px;
+            bottom: -15px;
+        }
+        
+        .left-leg {
+            left: 10px;
+            transform-origin: top center;
+            animation: legSwing 0.5s infinite alternate;
+        }
+        
+        .right-leg {
+            right: 10px;
+            transform-origin: top center;
+            animation: legSwing 0.5s infinite alternate-reverse;
+        }
+        
+        @keyframes armSwing {
+            0% { transform: rotate(-20deg); }
+            100% { transform: rotate(20deg); }
+        }
+        
+        @keyframes legSwing {
+            0% { transform: rotate(-15deg); }
+            100% { transform: rotate(15deg); }
+        }
+        
+        /* 信息面板样式 */
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .info-item {
+            text-align: center;
+            flex: 1;
+            padding: 10px;
+        }
+        
+        .info-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        /* 图表区域样式 */
+        .chart-container {
+            height: 400px;
+            position: relative;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        /* 表格区域样式 - 新增 */
+        .table-container {
+            margin-top: 30px;
+            display: none; /* 默认隐藏 */
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table-container.show {
+            display: block;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-weight: 600;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #ddd;
+            min-width: 80px;
+        }
+        
+        .data-table td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .data-table tr:nth-child(even) td {
+            background-color: #f0f7ff;
+        }
+        
+        .data-table td:first-child {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .ellipsis-cell {
+            font-size: 20px;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        
+        .table-note {
+            margin-top: 15px;
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        /* 控制面板样式 */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 140px;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .control-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .control-btn i {
+            margin-right: 8px;
+        }
+        
+        #speedControl {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+            font-size: 1em;
+            background: white;
+            color: #2c3e50;
+            font-weight: 600;
+            min-width: 140px;
+        }
+        
+        .speed-buttons {
+            display: flex;
+            gap: 10px;
+            background: white;
+            border: 2px solid #1abc9c;
+            border-radius: 8px;
+            padding: 10px 15px;
+            min-width: 200px;
+        }
+        
+        .speed-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .speed-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(26, 188, 156, 0.4);
+        }
+        
+        .speed-btn.active {
+            background: linear-gradient(135deg, #16a085, #149174);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+            transform: translateY(1px);
+        }
+        
+        .distance-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 2px solid #9b59b6;
+            border-radius: 8px;
+            padding: 10px 15px;
+            min-width: 200px;
+        }
+        
+        .distance-input-group input {
+            border: none;
+            outline: none;
+            font-size: 1em;
+            font-weight: 600;
+            color: #2c3e50;
+            width: 70px;
+            text-align: center;
+        }
+        
+        .distance-input-group span {
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        
+        #distanceSetBtn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+        
+        #distanceSetBtn:hover {
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+        
+        #restartBtn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        #restartBtn:hover {
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+        
+        #distanceTypeBtn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        #distanceTypeBtn:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        #tableBtn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        
+        #tableBtn:hover {
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+        }
+        
+        #startPointBtn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+        
+        #startPointBtn:hover {
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+        
+        /* 控制面板容器 - 新增 */
+        .control-panel-container {
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-btn, #speedControl, .speed-buttons, .distance-input-group {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .speed-buttons {
+                flex-direction: column;
+            }
+            
+            .data-table {
+                font-size: 14px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 10px 5px;
+                min-width: 60px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-running"></i> 小人跑步动画与函数图像</h1>
+            <p class="subtitle">一个小人以4米/秒的速度从A地跑向B地，可调整总长度并切换距离类型</p>
+        </header>
+        
+        <!-- 控制面板 - 上移 -->
+        <div class="control-panel-container">
+            <div class="panel">
+                <h2 class="panel-title"><i class="fas fa-sliders-h"></i> 控制面板</h2>
+                
+                <div class="controls">
+                    <button id="playBtn" class="control-btn">
+                        <i class="fas fa-play"></i> 开始跑步
+                    </button>
+                    
+                    <button id="pauseBtn" class="control-btn">
+                        <i class="fas fa-pause"></i> 暂停
+                    </button>
+                    
+                    <select id="speedControl" class="control-btn">
+                        <option value="0.5">0.5倍速度</option>
+                        <option value="1" selected>正常速度 (1x)</option>
+                        <option value="2">2倍速度</option>
+                        <option value="4">4倍速度</option>
+                        <option value="8">8倍速度</option>
+                    </select>
+                    
+                    <div class="speed-buttons">
+                        <button class="speed-btn active" id="speed4Btn">
+                            <i class="fas fa-bolt"></i> 速度4米/秒
+                        </button>
+                        <button class="speed-btn" id="speed2Btn">
+                            <i class="fas fa-walking"></i> 速度2米/秒
+                        </button>
+                    </div>
+                    
+                    <div class="distance-input-group">
+                        <input type="number" id="distanceInput" min="5" max="200" step="5" value="100">
+                        <span>米</span>
+                    </div>
+                    
+                    <button id="distanceSetBtn" class="control-btn">
+                        <i class="fas fa-ruler"></i> 设置总长度
+                    </button>
+                    
+                    <button id="distanceTypeBtn" class="control-btn">
+                        <i class="fas fa-exchange-alt"></i> 切换距离类型
+                    </button>
+                    
+                    <button id="startPointBtn" class="control-btn">
+                        <i class="fas fa-flag"></i> 起点: A
+                    </button>
+                    
+                    <button id="tableBtn" class="control-btn">
+                        <i class="fas fa-table"></i> 显示表格
+                    </button>
+                    
+                    <button id="restartBtn" class="control-btn">
+                        <i class="fas fa-redo"></i> 重新开始
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- 左侧：动画区域 -->
+            <div class="panel">
+                <h2 class="panel-title"><i class="fas fa-film"></i> 跑步动画</h2>
+                
+                <div class="animation-area">
+                    <div class="point-a">A</div>
+                    <div class="point-b">B</div>
+                    
+                    <div class="distance-label">
+                        总距离: <span id="totalDistance">100</span> 米
+                    </div>
+                    
+                    <div class="road"></div>
+                    
+                    <div class="runner" id="runner">
+                        <div class="runner-body">
+                            <div class="runner-head"></div>
+                            <div class="runner-arm left-arm"></div>
+                            <div class="runner-arm right-arm"></div>
+                            <div class="runner-leg left-leg"></div>
+                            <div class="runner-leg right-leg"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <div class="info-item">
+                        <div class="info-label">当前时间</div>
+                        <div class="info-value" id="currentTime">0.0</div>
+                        <div class="info-label">秒</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label" id="distanceLabel">已跑路程</div>
+                        <div class="info-value" id="currentDistance">0.0</div>
+                        <div class="info-label" id="distanceUnit">米</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">跑步速度</div>
+                        <div class="info-value" id="currentSpeed">4.0</div>
+                        <div class="info-label">米/秒</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：平面直角坐标系 -->
+            <div class="panel">
+                <h2 class="panel-title"><i class="fas fa-chart-line"></i> 路程-时间函数图像</h2>
+                
+                <div class="chart-container">
+                    <canvas id="chartCanvas" width="800" height="400"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 表格区域 - 新增 -->
+        <div class="table-container" id="tableContainer">
+            <h2 class="panel-title"><i class="fas fa-table"></i> 数据表格</h2>
+            <p class="table-note">表格显示跑步过程中的时间和对应距离数据（距离A地的路程）</p>
+            
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>X</th>
+                        <th>1</th>
+                        <th>2</th>
+                        <th>3</th>
+                        <th>4</th>
+                        <th>5</th>
+                        <th>6</th>
+                        <th>7</th>
+                        <th>8</th>
+                        <th>9</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Y</td>
+                        <td id="y1">4</td>
+                        <td id="y2">8</td>
+                        <td id="y3">12</td>
+                        <td id="y4">16</td>
+                        <td id="y5">20</td>
+                        <td id="y6">24</td>
+                        <td id="y7">28</td>
+                        <td id="y8">32</td>
+                        <td id="y9">36</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="table-note">
+                注：根据匀速运动公式 y = v·t，其中 v = <span id="speedValue">4</span>米/秒。当 x=1 时，y=<span id="yValue1">4</span>；x=2 时，y=<span id="yValue2">8</span>；以此类推。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 常量与变量定义
+        let RUNNER_SPEED = 4; // 初始速度为4米/秒，现在改为变量
+        let TOTAL_DISTANCE = 100; // 初始总距离
+        let ANIMATION_DURATION = TOTAL_DISTANCE / RUNNER_SPEED; // 总时间，单位：秒
+        
+        // 状态变量
+        let currentTime = 0;
+        let currentDistance = 0;
+        let animationId = null;
+        let isRunning = false;
+        let speedFactor = 1;
+        let dataPoints = [];
+        let distanceType = 'fromA'; // 'fromA' 或 'fromB'
+        let isTableVisible = false;
+        let startPoint = 'A'; // 'A' 或 'B'
+        
+        // 获取DOM元素
+        const runner = document.getElementById('runner');
+        const currentTimeEl = document.getElementById('currentTime');
+        const currentDistanceEl = document.getElementById('currentDistance');
+        const currentSpeedEl = document.getElementById('currentSpeed');
+        const totalDistanceEl = document.getElementById('totalDistance');
+        const distanceLabel = document.getElementById('distanceLabel');
+        const distanceUnit = document.getElementById('distanceUnit');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const speedControl = document.getElementById('speedControl');
+        const distanceInput = document.getElementById('distanceInput');
+        const distanceSetBtn = document.getElementById('distanceSetBtn');
+        const distanceTypeBtn = document.getElementById('distanceTypeBtn');
+        const startPointBtn = document.getElementById('startPointBtn');
+        const tableBtn = document.getElementById('tableBtn');
+        const chartCanvas = document.getElementById('chartCanvas');
+        const tableContainer = document.getElementById('tableContainer');
+        const speed4Btn = document.getElementById('speed4Btn');
+        const speed2Btn = document.getElementById('speed2Btn');
+        const speedValueEl = document.getElementById('speedValue');
+        const yValue1El = document.getElementById('yValue1');
+        const yValue2El = document.getElementById('yValue2');
+        
+        // 设置画布尺寸
+        const ctx = chartCanvas.getContext('2d');
+        
+        // 计算自动调整的单位长度
+        function calculateUnitLength() {
+            // 取总距离和总时间中的较大值，确保坐标系能完整显示数据
+            const maxValue = Math.max(TOTAL_DISTANCE, ANIMATION_DURATION);
+            
+            // 根据最大值动态计算合适的单位长度
+            if (maxValue <= 20) {
+                return 2; // 小数值使用较小单位长度
+            } else if (maxValue <= 50) {
+                return 5;
+            } else if (maxValue <= 100) {
+                return 10;
+            } else if (maxValue <= 200) {
+                return 20;
+            } else {
+                return 25; // 最大值使用较大单位长度
+            }
+        }
+        
+        // 初始化
+        function init() {
+            drawChart();
+            updateDisplay();
+            // 初始化表格数据
+            updateTable();
+        }
+        
+        // 更新总距离
+        function updateTotalDistance(newDistance) {
+            // 限制输入范围
+            newDistance = Math.max(5, Math.min(200, newDistance));
+            distanceInput.value = newDistance;
+            
+            TOTAL_DISTANCE = newDistance;
+            ANIMATION_DURATION = TOTAL_DISTANCE / RUNNER_SPEED;
+            totalDistanceEl.textContent = TOTAL_DISTANCE;
+            
+            // 如果当前时间超过新总距离对应的时间，调整当前时间
+            if (currentTime > ANIMATION_DURATION) {
+                currentTime = ANIMATION_DURATION;
+                currentDistance = calculateCurrentDistance();
+            }
+            
+            // 清空数据点重新开始
+            dataPoints = [];
+            
+            updateDisplay();
+        }
+        
+        // 计算当前距离（根据距离类型）
+        function calculateCurrentDistance() {
+            if (distanceType === 'fromA') {
+                // 距离A地的路程
+                return RUNNER_SPEED * currentTime;
+            } else {
+                // 距离B地的距离
+                return Math.max(0, TOTAL_DISTANCE - RUNNER_SPEED * currentTime);
+            }
+        }
+        
+        // 更新显示
+        function updateDisplay() {
+            currentTimeEl.textContent = currentTime.toFixed(1);
+            currentDistance = calculateCurrentDistance();
+            currentDistanceEl.textContent = currentDistance.toFixed(1);
+            currentSpeedEl.textContent = (RUNNER_SPEED * speedFactor).toFixed(1);
+            
+            // 更新距离标签
+            if (distanceType === 'fromA') {
+                distanceLabel.textContent = '已跑路程';
+                distanceUnit.textContent = '米';
+            } else {
+                distanceLabel.textContent = '距B距离';
+                distanceUnit.textContent = '米';
+            }
+            
+            // 更新小人位置
+            updateRunnerPosition();
+            
+            // 更新数据点
+            if (currentTime <= ANIMATION_DURATION) {
+                dataPoints.push({x: currentTime, y: currentDistance});
+            }
+            
+            // 绘制图表
+            drawChart();
+        }
+        
+        // 更新小人位置
+        function updateRunnerPosition() {
+            const roadWidth = document.querySelector('.animation-area').offsetWidth - 60;
+            let runnerPosition;
+            
+            if (startPoint === 'A') {
+                // 从A出发，向B前进
+                const actualDistanceFromA = RUNNER_SPEED * currentTime;
+                runnerPosition = (actualDistanceFromA / TOTAL_DISTANCE) * roadWidth;
+                runner.style.left = `${20 + Math.min(roadWidth, runnerPosition)}px`;
+            } else {
+                // 从B出发，向A前进
+                const actualDistanceFromB = RUNNER_SPEED * currentTime;
+                runnerPosition = (actualDistanceFromB / TOTAL_DISTANCE) * roadWidth;
+                runner.style.left = `${document.querySelector('.animation-area').offsetWidth - 40 - Math.min(roadWidth, runnerPosition)}px`;
+            }
+        }
+        
+        // 更新表格数据
+        function updateTable() {
+            // 根据当前速度重新计算y值
+            const yValues = [];
+            for (let i = 1; i <= 9; i++) {
+                if (distanceType === 'fromB') {
+                    // 距离B地的距离：y = TOTAL_DISTANCE - v·t
+                    yValues[i] = (TOTAL_DISTANCE - RUNNER_SPEED * i).toFixed(1);
+                } else {
+                    // 距离A地的路程：y = v·t
+                    yValues[i] = (RUNNER_SPEED * i).toFixed(1);
+                }
+            }
+            
+            // 更新表格中的y值
+            for (let i = 1; i <= 9; i++) {
+                document.getElementById(`y${i}`).textContent = yValues[i];
+            }
+            
+            // 更新表格说明
+            updateTableNote();
+        }
+        
+        // 更新表格说明
+        function updateTableNote() {
+            speedValueEl.textContent = RUNNER_SPEED;
+            
+            // 计算示例y值
+            let exampleY1, exampleY2;
+            if (distanceType === 'fromB') {
+                exampleY1 = (TOTAL_DISTANCE - RUNNER_SPEED * 1).toFixed(1);
+                exampleY2 = (TOTAL_DISTANCE - RUNNER_SPEED * 2).toFixed(1);
+            } else {
+                exampleY1 = (RUNNER_SPEED * 1).toFixed(1);
+                exampleY2 = (RUNNER_SPEED * 2).toFixed(1);
+            }
+            
+            yValue1El.textContent = exampleY1;
+            yValue2El.textContent = exampleY2;
+            
+            if (distanceType === 'fromB') {
+                document.querySelector('.table-note').innerHTML = 
+                    `注：根据匀速运动公式 y = S - v·t，其中 S = ${TOTAL_DISTANCE}米，v = ${RUNNER_SPEED}米/秒。当 x=1 时，y=${exampleY1}；x=2 时，y=${exampleY2}；以此类推。`;
+            } else {
+                document.querySelector('.table-note').innerHTML = 
+                    `注：根据匀速运动公式 y = v·t，其中 v = ${RUNNER_SPEED}米/秒。当 x=1 时，y=${exampleY1}；x=2 时，y=${exampleY2}；以此类推。`;
+            }
+        }
+        
+        // 设置速度
+        function setSpeed(speed) {
+            RUNNER_SPEED = speed;
+            ANIMATION_DURATION = TOTAL_DISTANCE / RUNNER_SPEED;
+            
+            // 更新按钮状态
+            if (speed === 4) {
+                speed4Btn.classList.add('active');
+                speed2Btn.classList.remove('active');
+            } else {
+                speed2Btn.classList.add('active');
+                speed4Btn.classList.remove('active');
+            }
+            
+            // 如果当前时间超过新速度对应的总时间，调整当前时间
+            if (currentTime > ANIMATION_DURATION) {
+                currentTime = ANIMATION_DURATION;
+                currentDistance = calculateCurrentDistance();
+            }
+            
+            // 清空数据点重新开始
+            dataPoints = [];
+            
+            updateDisplay();
+            updateTable();
+        }
+        
+        // 绘制函数图像
+        function drawChart() {
+            const width = chartCanvas.width;
+            const height = chartCanvas.height;
+            
+            // 计算自动调整的单位长度（x轴和y轴统一）
+            const UNIT_LENGTH = calculateUnitLength();
+            
+            // 设置每个单位对应的像素数
+            const unitSize = 30; // 每个单位对应30像素
+            
+            // 计算坐标系的范围（以动态单位长度为单位）
+            // x轴：时间，需要显示的最大值
+            const maxXValue = ANIMATION_DURATION;
+            const maxXUnits = Math.ceil(maxXValue / UNIT_LENGTH) + 1;
+            
+            // y轴：距离，需要显示的最大值
+            const maxYValue = TOTAL_DISTANCE;
+            const maxYUnits = Math.ceil(maxYValue / UNIT_LENGTH) + 1;
+            
+            // 取两者中的较大值，确保坐标系是正方形或接近正方形
+            const maxUnits = Math.max(maxXUnits, maxYUnits);
+            
+            // 原点坐标 - 使用一个原点
+            const originX = 80; // 原点x坐标
+            const originY = height - 80; // 原点y坐标（左下角）
+            
+            // 计算实际绘制的范围
+            const graphWidth = maxUnits * unitSize;
+            const graphHeight = maxUnits * unitSize;
+            
+            // 清除画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 绘制背景
+            ctx.fillStyle = '#f9f9f9';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 绘制网格线（使用统一单位长度）
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            // 垂直网格线
+            for (let xUnit = 0; xUnit <= maxUnits; xUnit++) {
+                const xValue = xUnit * UNIT_LENGTH;
+                const gridX = originX + (xValue / UNIT_LENGTH) * unitSize;
+                
+                // 主要网格线
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(gridX, originY);
+                ctx.lineTo(gridX, originY - graphHeight);
+                ctx.stroke();
+                
+                // 绘制刻度标签
+                if (xValue > 0) { // 只显示正数刻度
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(xValue.toString(), gridX, originY + 20);
+                }
+            }
+            
+            // 水平网格线
+            for (let yUnit = 0; yUnit <= maxUnits; yUnit++) {
+                const yValue = yUnit * UNIT_LENGTH;
+                const gridY = originY - (yValue / UNIT_LENGTH) * unitSize;
+                
+                // 主要网格线
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(originX, gridY);
+                ctx.lineTo(originX + graphWidth, gridY);
+                ctx.stroke();
+                
+                // 绘制刻度标签
+                if (yValue > 0) { // 只显示正数刻度
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(yValue.toString(), originX - 10, gridY + 5);
+                }
+            }
+            
+            // 绘制坐标轴
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            
+            // X轴
+            ctx.beginPath();
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(originX + graphWidth, originY);
+            ctx.stroke();
+            
+            // Y轴
+            ctx.beginPath();
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(originX, originY - graphHeight);
+            ctx.stroke();
+            
+            // 绘制坐标轴箭头
+            // X轴箭头
+            ctx.beginPath();
+            ctx.moveTo(originX + graphWidth, originY);
+            ctx.lineTo(originX + graphWidth - 10, originY - 6);
+            ctx.lineTo(originX + graphWidth - 10, originY + 6);
+            ctx.closePath();
+            ctx.fillStyle = '#333';
+            ctx.fill();
+            
+            // Y轴箭头
+            ctx.beginPath();
+            ctx.moveTo(originX, originY - graphHeight);
+            ctx.lineTo(originX - 6, originY - graphHeight + 10);
+            ctx.lineTo(originX + 6, originY - graphHeight + 10);
+            ctx.closePath();
+            ctx.fillStyle = '#333';
+            ctx.fill();
+            
+            // 绘制原点标记
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('O', originX - 10, originY + 20);
+            
+            // 坐标轴标题
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('时间 x (秒)', originX + graphWidth / 2, originY + 40);
+            
+            ctx.save();
+            ctx.translate(30, originY - graphHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            if (distanceType === 'fromA') {
+                ctx.fillText('距离A地的路程 y (米)', 0, 0);
+            } else {
+                ctx.fillText('距离B地的距离 y (米)', 0, 0);
+            }
+            ctx.restore();
+            
+            // 绘制单位长度标记
+            // X轴单位长度标记
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(originX + unitSize, originY - 5);
+            ctx.lineTo(originX + unitSize, originY + 5);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(UNIT_LENGTH.toString(), originX + unitSize / 2, originY + 30);
+            
+            // Y轴单位长度标记
+            ctx.beginPath();
+            ctx.moveTo(originX - 5, originY - unitSize);
+            ctx.lineTo(originX + 5, originY - unitSize);
+            ctx.stroke();
+            
+            ctx.save();
+            ctx.translate(originX - 25, originY - unitSize / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(UNIT_LENGTH.toString(), 0, 0);
+            ctx.restore();
+            
+            // 绘制实际运动轨迹（红色实线）
+            if (dataPoints.length > 0) {
+                ctx.strokeStyle = '#e74c3c';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                
+                for (let i = 0; i < dataPoints.length; i++) {
+                    const point = dataPoints[i];
+                    const pointX = originX + (point.x / UNIT_LENGTH) * unitSize;
+                    const pointY = originY - (point.y / UNIT_LENGTH) * unitSize;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(pointX, pointY);
+                    } else {
+                        ctx.lineTo(pointX, pointY);
+                    }
+                }
+                
+                ctx.stroke();
+                
+                // 绘制当前点（绿色大圆点）
+                if (currentTime <= ANIMATION_DURATION) {
+                    const currentX = originX + (currentTime / UNIT_LENGTH) * unitSize;
+                    const currentY = originY - (currentDistance / UNIT_LENGTH) * unitSize;
+                    
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.beginPath();
+                    ctx.arc(currentX, currentY, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // 绘制当前点坐标 - 绿色文字显示坐标
+                    ctx.fillStyle = '#27ae60';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`(${currentTime.toFixed(1)}, ${currentDistance.toFixed(1)})`, currentX + 10, currentY - 15);
+                }
+            }
+            
+            // 绘制图例
+            const legendX = width - 220;
+            const legendY = 40;
+            
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(legendX, legendY, 25, 4);
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('实际运动轨迹', legendX + 35, legendY + 10);
+            
+            // 显示当前点的说明
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.arc(legendX, legendY + 25, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('当前点坐标', legendX + 35, legendY + 30);
+            
+            // 绘制当前状态
+            ctx.fillStyle = '#9b59b6';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            let statusText = `当前: `;
+            if (startPoint === 'A') {
+                statusText += '从A到B';
+            } else {
+                statusText += '从B到A';
+            }
+            if (distanceType === 'fromA') {
+                statusText += `, 距离A地的路程 (速度: ${RUNNER_SPEED}米/秒)`;
+            } else {
+                statusText += `, 距离B地的距离 (速度: ${RUNNER_SPEED}米/秒)`;
+            }
+            ctx.fillText(statusText, width / 2, 30);
+            
+            // 显示当前单位长度
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(`单位长度: ${UNIT_LENGTH} (x轴和y轴统一)`, width - 20, height - 20);
+            ctx.fillText(`数据范围: 5-200米`, width - 20, height - 40);
+        }
+        
+        // 动画循环
+        function animate() {
+            if (!isRunning) return;
+            
+            // 计算时间增量（考虑速度因子）
+            const deltaTime = 0.05 * speedFactor;
+            currentTime += deltaTime;
+            
+            // 限制最大时间
+            if (currentTime > ANIMATION_DURATION) {
+                currentTime = ANIMATION_DURATION;
+                stopAnimation();
+                playBtn.innerHTML = '<i class="fas fa-check"></i> 已完成';
+                playBtn.disabled = true;
+            }
+            
+            updateDisplay();
+            
+            if (isRunning) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // 开始动画
+        function startAnimation() {
+            if (currentTime >= ANIMATION_DURATION) return;
+            
+            isRunning = true;
+            playBtn.innerHTML = '<i class="fas fa-running"></i> 跑步中...';
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+            animate();
+        }
+        
+        // 暂停动画
+        function pauseAnimation() {
+            isRunning = false;
+            playBtn.innerHTML = '<i class="fas fa-play"></i> 继续跑步';
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        // 停止动画
+        function stopAnimation() {
+            isRunning = false;
+            playBtn.innerHTML = '<i class="fas fa-play"></i> 开始跑步';
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        // 重新开始
+        function restartAnimation() {
+            stopAnimation();
+            currentTime = 0;
+            dataPoints = [];
+            playBtn.innerHTML = '<i class="fas fa-play"></i> 开始跑步';
+            playBtn.disabled = false;
+            updateDisplay();
+        }
+        
+        // 切换距离类型
+        function toggleDistanceType() {
+            if (distanceType === 'fromA') {
+                distanceType = 'fromB';
+                distanceTypeBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> 切换到距离A地';
+            } else {
+                distanceType = 'fromA';
+                distanceTypeBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> 切换到距离B地';
+            }
+            
+            // 清空数据点重新开始
+            dataPoints = [];
+            
+            updateDisplay();
+            updateTable(); // 更新表格数据
+        }
+        
+        // 切换起点
+        function toggleStartPoint() {
+            if (startPoint === 'A') {
+                startPoint = 'B';
+                startPointBtn.innerHTML = '<i class="fas fa-flag"></i> 起点: B';
+            } else {
+                startPoint = 'A';
+                startPointBtn.innerHTML = '<i class="fas fa-flag"></i> 起点: A';
+            }
+            
+            // 清空数据点重新开始
+            dataPoints = [];
+            
+            updateDisplay();
+        }
+        
+        // 切换表格显示/隐藏
+        function toggleTable() {
+            isTableVisible = !isTableVisible;
+            
+            if (isTableVisible) {
+                tableContainer.classList.add('show');
+                tableBtn.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏表格';
+            } else {
+                tableContainer.classList.remove('show');
+                tableBtn.innerHTML = '<i class="fas fa-table"></i> 显示表格';
+            }
+        }
+        
+        // 设置总距离
+        function setTotalDistance() {
+            const newDistance = parseInt(distanceInput.value);
+            if (!isNaN(newDistance) && newDistance >= 5 && newDistance <= 200) {
+                updateTotalDistance(newDistance);
+                updateTable(); // 更新表格数据
+            } else {
+                alert('请输入5到200之间的有效数字');
+                distanceInput.value = TOTAL_DISTANCE;
+            }
+        }
+        
+        // 事件监听
+        playBtn.addEventListener('click', startAnimation);
+        pauseBtn.addEventListener('click', pauseAnimation);
+        restartBtn.addEventListener('click', restartAnimation);
+        distanceSetBtn.addEventListener('click', setTotalDistance);
+        distanceTypeBtn.addEventListener('click', toggleDistanceType);
+        startPointBtn.addEventListener('click', toggleStartPoint);
+        tableBtn.addEventListener('click', toggleTable);
+        
+        // 速度按钮事件
+        speed4Btn.addEventListener('click', () => setSpeed(4));
+        speed2Btn.addEventListener('click', () => setSpeed(2));
+        
+        // 输入框回车事件
+        distanceInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                setTotalDistance();
+            }
+        });
+        
+        speedControl.addEventListener('change', function() {
+            speedFactor = parseFloat(this.value);
+            updateDisplay();
+        });
+        
+        // 初始化页面
+        window.addEventListener('load', function() {
+            // 设置画布尺寸
+            chartCanvas.width = chartCanvas.offsetWidth;
+            chartCanvas.height = chartCanvas.offsetHeight;
+            init();
+        });
+        
+        // 窗口大小变化时重新绘制图表
+        window.addEventListener('resize', function() {
+            // 更新画布尺寸
+            chartCanvas.width = chartCanvas.offsetWidth;
+            chartCanvas.height = chartCanvas.offsetHeight;
+            drawChart();
+        });
+    </script>
+</body>
+</html>

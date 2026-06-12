@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>行程问题分段函数深度探究 - 教学演示版</title>
+    <style>
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; }
+        .left-panel { width: 60%; display: flex; flex-direction: column; border-right: 2px solid #ccc; }
+        .right-panel { width: 40%; padding: 25px; overflow-y: auto; background: white; }
+        .top-left { height: 35%; border-bottom: 2px solid #eee; padding: 20px; background: #fff; }
+        .bottom-left { height: 65%; padding: 15px; background: #fff; position: relative; }
+        
+        #scene { width: 90%; height: 120px; border-bottom: 3px solid #333; margin: 60px auto 0; position: relative; }
+        .person { position: absolute; bottom: 0; text-align: center; width: 80px; }
+        .dist-info { font-weight: bold; font-size: 14px; margin-bottom: 5px; background: rgba(255,255,255,0.8); border-radius: 4px; border: 1px solid #ddd; }
+        
+        .front-avatar { font-size: 60px; line-height: 1; margin-bottom: 5px; }
+        
+        #mathCanvas { background: #fff; border: 1px solid #eee; border-radius: 8px; }
+        
+        textarea { 
+            width: 100%; 
+            height: 120px; 
+            padding: 15px; 
+            border: 2px solid #007bff; 
+            border-radius: 8px; 
+            font-size: 32px; 
+            margin: 10px 0; 
+            box-sizing: border-box; 
+            resize: none;
+            outline: none;
+            font-family: inherit;
+        }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; font-weight: bold; font-size: 14px; }
+        .btn-img { background: #e7f3ff; color: #007bff; }
+        .btn-ans { background: #d4edda; color: #28a745; }
+        
+        #answer-box { 
+            margin-top: 20px; 
+            padding: 15px; 
+            border: 1px solid #e0e0e0; 
+            background: #fcfcfc; 
+            display: none; 
+            border-left: 5px solid #28a745; 
+            white-space: pre-line; 
+            line-height: 1.8; 
+            font-size: 18px; 
+        }
+
+        .slider-wrap { font-size: 20px; padding: 10px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; }
+        input[type=range] { width: 60%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="left-panel">
+    <div class="top-left">
+        <div class="slider-wrap">
+            时间轴：<input type="range" id="time-slider" min="0" max="5" step="0.01" value="0">
+            <span id="time-show" style="color:#007bff; font-weight:bold;">0.00</span> s
+        </div>
+        <div id="scene">
+            <div id="xiaoxin" class="person">
+                <div class="dist-info" id="label-xin" style="color:blue">y1: 0.0m</div>
+                <div class="front-avatar">👦</div>
+                <div style="font-size: 12px; font-weight:bold;">小新</div>
+            </div>
+            <div id="xiaozheng" class="person">
+                <div class="dist-info" id="label-zheng" style="color:red">y2: 10.0m</div>
+                <div class="front-avatar">👧</div>
+                <div style="font-size: 12px; font-weight:bold;">小郑</div>
+            </div>
+        </div>
+        <div style="margin-top: 30px; display: flex; gap: 5px;">
+            <button onclick="toggleExtra(1)" style="background:#6c757d; color:white;">附加1</button>
+            <button onclick="toggleExtra(2)" style="background:#6c757d; color:white;">附加2</button>
+            <button onclick="toggleCrop()" style="background:#dc3545; color:white;">函数裁剪</button>
+            <button onclick="toggleLabels()" style="background:#007bff; color:white;">变量切换(x,y ↔ t,v)</button>
+        </div>
+    </div>
+    <div class="bottom-left">
+        <canvas id="mathCanvas"></canvas>
+    </div>
+</div>
+
+<div class="right-panel">
+    <div style="text-align: right; margin-bottom: 10px;">
+        解答区字体：
+        <button onclick="adjustAnsFont(2)" style="flex:none; width:45px; background:#eee;">+</button> 
+        <button onclick="adjustAnsFont(-2)" style="flex:none; width:45px; background:#eee;">-</button>
+    </div>
+    
+    <h3 style="margin-top:0;">互动探究区</h3>
+    <textarea id="q-input"></textarea>
+    
+    <div class="btn-group">
+        <button class="btn-img" onclick="updateChartLogic()">生成图像状态</button>
+        <button class="btn-ans" onclick="solveLogic()">点击解答过程</button>
+    </div>
+
+    <div id="answer-box"></div>
+</div>
+
+<script>
+    const canvas = document.getElementById('mathCanvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('time-slider');
+    let extra1 = false, extra2 = false, isCropped = false, isPhysicsMode = false;
+    let highlightMode = null; 
+    let highlightVal = 0;
+
+    const getY1 = (x) => x <= 2.5 ? 4 * x : 10;
+    const getY2 = (x) => x <= 5 ? 10 - 2 * x : 0;
+    const intersectX = 10 / 6;
+
+    function init() {
+        canvas.width = canvas.parentElement.clientWidth - 30;
+        canvas.height = canvas.parentElement.clientHeight - 30;
+        render();
+    }
+
+    function updateScene() {
+        const x = parseFloat(slider.value);
+        document.getElementById('time-show').innerText = x.toFixed(2);
+        const y1 = getY1(x);
+        const y2 = getY2(x);
+        const sceneW = document.getElementById('scene').clientWidth - 80;
+        document.getElementById('xiaoxin').style.left = (y1 / 10 * sceneW) + 'px';
+        document.getElementById('xiaozheng').style.left = (y2 / 10 * sceneW) + 'px';
+        
+        const varY = isPhysicsMode ? "v" : "y";
+        document.getElementById('label-xin').innerText = `${varY}1: ${y1.toFixed(1)}m`;
+        document.getElementById('label-zheng').innerText = `${varY}2: ${y2.toFixed(1)}m`;
+        render(); 
+    }
+
+    function drawArrowAxis(ctx, x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        const headlen = 10;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.fillStyle = "#333";
+        ctx.fill();
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const pad = 60; const w = canvas.width - pad * 2; const h = canvas.height - pad * 2;
+        const mX = (v) => pad + (v / 5) * w;
+        const mY = (v) => canvas.height - pad - (v / 12) * h;
+
+        ctx.strokeStyle = "#333"; ctx.lineWidth = 2;
+        drawArrowAxis(ctx, pad, canvas.height - pad, pad, pad - 20); // 纵轴
+        drawArrowAxis(ctx, pad, canvas.height - pad, canvas.width - pad + 20, canvas.height - pad); // 横轴
+
+        // 标签切换逻辑
+        const labelX = isPhysicsMode ? "t" : "x";
+        const labelY = isPhysicsMode ? "v" : "y";
+        
+        ctx.fillStyle = "#000"; 
+        ctx.font = isPhysicsMode ? "bold 28px 'Times New Roman'" : "bold 24px 'Times New Roman'";
+        ctx.fillText(labelX, canvas.width - pad + 25, canvas.height - pad + 10);
+        ctx.fillText(labelY, pad - 15, pad - 25);
+
+        // y1 小新 (蓝色)
+        ctx.beginPath(); ctx.strokeStyle = "blue"; ctx.lineWidth = 3;
+        if (isCropped) {
+            ctx.moveTo(mX(0), mY(0)); ctx.lineTo(mX(intersectX), mY(4 * intersectX));
+        } else {
+            ctx.moveTo(mX(0), mY(0)); ctx.lineTo(mX(2.5), mY(10)); ctx.lineTo(mX(5), mY(10));
+        }
+        ctx.stroke();
+
+        // y2 小郑 (红色)
+        ctx.beginPath(); ctx.strokeStyle = "red"; ctx.lineWidth = 3;
+        if (isCropped) {
+            ctx.moveTo(mX(intersectX), mY(10 - 2 * intersectX)); ctx.lineTo(mX(5), mY(0));
+        } else {
+            ctx.moveTo(mX(0), mY(10)); ctx.lineTo(mX(5), mY(0));
+        }
+        ctx.stroke();
+
+        const curX = parseFloat(slider.value);
+        ctx.fillStyle = "#333";
+        ctx.beginPath(); ctx.arc(mX(curX), mY(getY1(curX)), 5, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(mX(curX), mY(getY2(curX)), 5, 0, 7); ctx.fill();
+
+        if(extra1) drawStatic(0, 3, 2, 11, "orange");
+        if(extra2) drawStatic(1, 0, 3, 8, "purple");
+
+        if (highlightMode === 'meet') {
+            drawVLine(intersectX, `相遇 (${intersectX.toFixed(2)}, 6.67)`, true);
+        } else if (highlightMode === 'reach') {
+            drawPoint(2.5, 10, "小新到达", "blue");
+            drawPoint(5, 0, "小郑到达", "red");
+        } else if (highlightMode === 'dist') {
+            let x1 = (10 - highlightVal) / 6;
+            let x2 = (10 + highlightVal) / 6;
+            if(x1 >=0) drawVLine(x1, "相遇前相距"+highlightVal+"m");
+            if(x2 <=5) drawVLine(x2, "相遇后相距"+highlightVal+"m");
+        } else if (highlightMode === 'closer') {
+            drawVLine(intersectX, "临界点");
+            ctx.fillStyle = "rgba(0, 0, 255, 0.05)"; ctx.fillRect(mX(0), mY(12), mX(intersectX)-mX(0), h);
+        }
+    }
+
+    function drawPoint(x, y, label, color) {
+        const pad = 60; const w = canvas.width - pad * 2; const h = canvas.height - pad * 2;
+        const px = pad + (x/5)*w; const py = canvas.height - pad - (y/12)*h;
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.fill();
+        ctx.font = "14px sans-serif";
+        ctx.fillText(label, px + 10, py - 10);
+    }
+
+    function drawVLine(x, label, showPoint = false) {
+        const pad = 60; const w = canvas.width - pad * 2; const h = canvas.height - pad * 2;
+        const px = pad + (x/5)*w;
+        ctx.setLineDash([5, 5]); ctx.strokeStyle = "green";
+        ctx.beginPath(); ctx.moveTo(px, pad); ctx.lineTo(px, canvas.height - pad); ctx.stroke();
+        ctx.setLineDash([]); ctx.fillStyle = "green"; ctx.font = "14px sans-serif";
+        ctx.fillText(label, px + 5, pad + 20);
+        if (showPoint) {
+            const py = canvas.height - pad - (getY1(x)/12)*h;
+            ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.fill();
+        }
+    }
+
+    function drawStatic(x1, y1, x2, y2, color) {
+        const pad = 60; const w = canvas.width - pad * 2; const h = canvas.height - pad * 2;
+        ctx.beginPath(); ctx.strokeStyle = color; ctx.setLineDash([3, 3]);
+        ctx.moveTo(pad + (x1/5)*w, canvas.height - pad - (y1/12)*h);
+        ctx.lineTo(pad + (x2/5)*w, canvas.height - pad - (y2/12)*h);
+        ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    function toggleLabels() {
+        isPhysicsMode = !isPhysicsMode;
+        updateScene();
+    }
+
+    function updateChartLogic() {
+        const q = document.getElementById('q-input').value;
+        if (q.includes("相遇")) {
+            highlightMode = 'meet'; slider.value = intersectX.toFixed(2); updateScene();
+        } else if (q.includes("谁先")) {
+            highlightMode = 'reach';
+        } else if (q.includes("相距")) {
+            const m = q.match(/\d+/); highlightVal = m ? parseFloat(m[0]) : 2; highlightMode = 'dist';
+        } else if (q.includes("更近")) {
+            highlightMode = 'closer';
+        } else {
+            highlightMode = null;
+        }
+        render();
+    }
+
+    function solveLogic() {
+        const q = document.getElementById('q-input').value;
+        const box = document.getElementById('answer-box');
+        const varX = isPhysicsMode ? "t" : "x";
+        const varY = isPhysicsMode ? "v" : "y";
+        box.style.display = "block";
+        
+        if (q.includes("相遇")) {
+            box.innerHTML = `<b>【解答过程】</b>\n令 ${varY}1 = ${varY}2，即 4${varX} = 10 - 2${varX}。\n解得 6${varX} = 10，${varX} ≈ 1.67 (秒)。\n此时距离A地 6.67 米。`;
+        } else if (q.includes("谁先")) {
+            box.innerHTML = `<b>【解答过程】</b>\n小新到达B地(${varY}1=10)：4${varX}=10, ${varX}=2.5s。\n小郑到达A地(${varY}2=0)：10-2${varX}=0, ${varX}=5s。\n结论：小新先到达。`;
+        } else if (q.includes("相距")) {
+            const m = q.match(/\d+/); const a = m ? parseFloat(m[0]) : 2;
+            box.innerHTML = `<b>【解答过程】</b>\n相遇前：(10-2${varX})-4${varX} = ${a} => ${varX} = ${((10-a)/6).toFixed(2)}s\n相遇后：4${varX}-(10-2${varX}) = ${a} => ${varX} = ${((10+a)/6).toFixed(2)}s`;
+        } else if (q.includes("更近")) {
+            box.innerHTML = `<b>【解答过程】</b>\n小新离A更近即 ${varY}1 < ${varY}2：\n4${varX} < 10 - 2${varX}  =>  6${varX} < 10  =>  ${varX} < 1.67s。`;
+        } else {
+            box.innerHTML = "请输入关键词：相遇、相距、谁先、更近。";
+        }
+    }
+
+    function adjustAnsFont(v) {
+        const el = document.getElementById('answer-box');
+        const cur = parseInt(window.getComputedStyle(el).fontSize);
+        el.style.fontSize = (cur + v) + "px";
+    }
+
+    function toggleExtra(n) { n===1 ? extra1=!extra1 : extra2=!extra2; render(); }
+    function toggleCrop() { isCropped = !isCropped; render(); }
+
+    slider.addEventListener('input', updateScene);
+    window.onload = init;
+</script>
+</body>
+</html>
